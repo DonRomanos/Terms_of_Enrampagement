@@ -1,0 +1,7 @@
+/build/*
+/install/*
+/build*
+CMakeSettings.json
+/.vs/*
+/.vscode/*
+!/.vscode/tasks.json
