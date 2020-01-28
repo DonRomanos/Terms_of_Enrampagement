@@ -1,5 +1,4 @@
 #include "challenge.hpp"
-#include "reference.hpp"
 
 #include "gtest/gtest.h"
 
@@ -22,11 +21,7 @@ REGISTER_TYPED_TEST_CASE_P(Some_typed_Test,
                             Should_Succeed);
 
 // Now we can instantiate it with our types.
-#ifdef BUILD_REFERENCE
-    using TypesToTest = ::testing::Types<challenge::SomeClass, reference::SomeClass>;
-#else
-    using TypesToTest = ::testing::Types<reference::SomeClass>;
-#endif
+using TypesToTest = ::testing::Types<challenge::SomeClass>;
 
 INSTANTIATE_TYPED_TEST_CASE_P(WhateverNameYouWant, Some_typed_Test, TypesToTest);
 

@@ -13,12 +13,15 @@
             "group": {
                 "isDefault": true,
                 "kind": "build"
-            }
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
         },
         {
             "label": "conan install",
             "type": "shell",
-            "command": "mkdir -p build_${input:conan-profile} && cd build_${input:conan-profile} && conan install .. -p ${input:conan-profile}",
+            "command": "mkdir -p build_${input:conan-profile} && cd build_${input:conan-profile} && conan install .. -p ${input:conan-profile} --build missing",
             "problemMatcher": [
                 "$gcc"
             ]

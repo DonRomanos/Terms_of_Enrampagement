@@ -1,5 +1,4 @@
 #include "challenge.hpp"
-#include "reference.hpp"
 
 #include "benchmark/benchmark.h"
 
@@ -16,9 +15,6 @@ template <class T> void BM_SomeFunc(benchmark::State& state)
 }
 
 /***************************************************************/
-#ifdef BUILD_REFERENCE
-BENCHMARK_TEMPLATE(BM_SomeFunc, reference::SomeClass)->Range(1 << 0, 1 << 10)->Complexity();
-#endif
 BENCHMARK_TEMPLATE(BM_SomeFunc, challenge::SomeClass)->RangeMultiplier(2)->Range(1 << 0, 1 << 12)->Complexity();
 
 // Run the benchmark

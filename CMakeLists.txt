@@ -1,52 +1,42 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(Challenge)
+project(Terms_of_Enrampagement)
 
-add_library(${PROJECT_NAME} INTERFACE)
-add_library(Challenge::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(${PROJECT_NAME}_logic INTERFACE)
+add_library(logic::${PROJECT_NAME} ALIAS ${PROJECT_NAME}_logic)
 
-target_include_directories(${PROJECT_NAME} INTERFACE src/)
-target_sources(${PROJECT_NAME} INTERFACE
-    src/challenge.hpp)
+target_include_directories(${PROJECT_NAME}_logic INTERFACE src/)
+target_sources(${PROJECT_NAME}_logic INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/challenge.hpp)
 # Normally I would make this private, but since this is my own and I am lazy I can do this :)
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
-target_compile_options(${PROJECT_NAME} INTERFACE
+target_compile_features(${PROJECT_NAME}_logic INTERFACE cxx_std_20)
+target_compile_options(${PROJECT_NAME}_logic INTERFACE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
           -Wall>
      $<$<CXX_COMPILER_ID:MSVC>:
           /W4>)
 
-######################################################################
-option(BUILD_REFERENCE "Will build a reference implementation as a library, 
-                        which will also be tested and benchmarked. Cool for comparison." ON)
-if(BUILD_REFERENCE)
-    add_library(${PROJECT_NAME}_Reference INTERFACE)
-    add_library(onions::${PROJECT_NAME}_Reference ALIAS ${PROJECT_NAME}_Reference)
-    target_include_directories(${PROJECT_NAME}_Reference INTERFACE src/)
-    target_sources(${PROJECT_NAME}_Reference INTERFACE
-        src/reference.hpp)
-    target_compile_definitions(${PROJECT_NAME}_Reference INTERFACE BUILD_REFERENCE) # We will use this for an ifdef
-    target_compile_features(${PROJECT_NAME}_Reference INTERFACE cxx_std_20)
-    target_compile_options(${PROJECT_NAME}_Reference INTERFACE
-        $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-            -Wall>
-        $<$<CXX_COMPILER_ID:MSVC>:
-            /W4>)
-endif()
-
+find_package(glfw REQUIRED)
+add_executable(${PROJECT_NAME})
+target_sources(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    logic::${PROJECT_NAME}
+    glfw::glfw)
 ######################################################################
 option(BUILD_TESTS "Will build the tests verifying your result" ON)
 if( BUILD_TESTS)
     find_package(gtest REQUIRED)
     add_executable(${PROJECT_NAME}_Tests)
     target_sources(${PROJECT_NAME}_Tests PRIVATE 
-        src/tests.cpp)
+        src/tests/tests.cpp)
     target_include_directories(${PROJECT_NAME}_Tests PRIVATE
         src/)
     target_link_libraries(${PROJECT_NAME}_Tests PRIVATE
-        Challenge::${PROJECT_NAME}
-        gtest::gtest
-        $<$<TARGET_EXISTS:${PROJECT_NAME}_Reference>:${PROJECT_NAME}_Reference>)
+        logic::${PROJECT_NAME}
+        gtest::gtest)
 
     include(GoogleTest)
     enable_testing()
@@ -63,14 +53,14 @@ if( BUILD_BENCHMARK)
 
     add_executable(${PROJECT_NAME}_Benchmark)
     target_sources(${PROJECT_NAME}_Benchmark PRIVATE 
-        src/benchmark.cpp)
+        src/benchmark/benchmark.cpp)
     target_include_directories(${PROJECT_NAME}_Benchmark PRIVATE
+        src
         src/benchmark)
     target_link_libraries(${PROJECT_NAME}_Benchmark PRIVATE
-        Challenge::${PROJECT_NAME}
+        logic::${PROJECT_NAME}
         benchmark::benchmark
-        Threads::Threads
-        $<$<TARGET_EXISTS:${PROJECT_NAME}_Reference>:${PROJECT_NAME}_Reference>)
+        Threads::Threads)
 
     add_custom_target(NAME ${PROJECT_NAME}_Benchmark
         COMMAND ${PROJECT_NAME}_Benchmark

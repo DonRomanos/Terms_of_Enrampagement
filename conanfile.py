@@ -2,11 +2,11 @@ from conans import ConanFile, CMake
 
 class StringChallenge(ConanFile):
     settings = 'os', 'arch', 'compiler', 'build_type'
-    requires = "gtest/1.8.1@bincrafters/stable", "benchmark/1.5.0"
+    requires = "gtest/1.8.1@bincrafters/stable", "benchmark/1.5.0", "glfw/3.3@bincrafters/stable"
     generators = "cmake_find_package" # can be updated to cmake_find_package_multi if necessary
 
     def imports(self):
-        self.copy("*.so", "bin", "lib")
+        #self.copy("*.so", "bin", "lib")
         self.copy("*.dll", "bin", "bin")
         self.copy("*.dylib", "bin", "lib")
 
