@@ -1,5 +1,3 @@
-#include "challenge.hpp"
-
 #include "gtest/gtest.h"
 
 template <typename T>
@@ -21,7 +19,7 @@ REGISTER_TYPED_TEST_CASE_P(Some_typed_Test,
                             Should_Succeed);
 
 // Now we can instantiate it with our types.
-using TypesToTest = ::testing::Types<challenge::SomeClass>;
+using TypesToTest = ::testing::Types<int>;
 
 INSTANTIATE_TYPED_TEST_CASE_P(WhateverNameYouWant, Some_typed_Test, TypesToTest);
 

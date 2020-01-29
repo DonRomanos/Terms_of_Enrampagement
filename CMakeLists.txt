@@ -7,7 +7,7 @@ add_library(logic::${PROJECT_NAME} ALIAS ${PROJECT_NAME}_logic)
 
 target_include_directories(${PROJECT_NAME}_logic INTERFACE src/)
 target_sources(${PROJECT_NAME}_logic INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/challenge.hpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/dispatcher.hpp)
 # Normally I would make this private, but since this is my own and I am lazy I can do this :)
 target_compile_features(${PROJECT_NAME}_logic INTERFACE cxx_std_20)
 target_compile_options(${PROJECT_NAME}_logic INTERFACE
@@ -19,12 +19,20 @@ target_compile_options(${PROJECT_NAME}_logic INTERFACE
 find_package(glfw REQUIRED)
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/application.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/glfw_dispatcher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan_renderer.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     logic::${PROJECT_NAME}
     glfw::glfw)
+target_compile_options(${PROJECT_NAME} PRIVATE
+     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wall>
+     $<$<CXX_COMPILER_ID:MSVC>:
+          /W4>)
 ######################################################################
 option(BUILD_TESTS "Will build the tests verifying your result" ON)
 if( BUILD_TESTS)
