@@ -34,9 +34,12 @@ Thats the basic Idea, lets see what we can do.
 * Conan
 * GTest
 * Google Microbenchmark
-* SFML
+* GLFW
+* Vulkan
 
-This should all be taken care of by Conan and CMake :)
+Install the Vulkan SDK and make sure you have an environment variable VULKAN_SDK (should automatically be done when installing the SDK, maybe restart your IDE / shell)
+
+The rest should be taken care of by Conan and CMake :) (Conan Package for the SDK is currently in progress, once its available I will use it)
 
 **Note**: By default this uses C++20 because I want to play around with the newest things.
 
@@ -49,6 +52,7 @@ Here is what I did:
 
 * Install OpenGL dependencies to enable linking (some opengl libraries were missing e.g. xcursor, xrender,...)
 * Install vcXsrv on windows to have something to display something (works with glxgears)
+* Run vcXsrv with *Multiple Windows*, *No Client*, and **without** *Native OpenGL*
 * Set Display: export DISPLAY=:0
 * Run the application ...
 

@@ -1,57 +1,24 @@
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-
-static void error_callback(int error, const char* description)
-{
-    fprintf(stderr, "Error: %s\n", description);
-}
-
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
 
 int main(void)
 {
-    GLFWwindow* window;
+    const int WIDTH = 800;
+    const int HEIGHT = 600;
 
-    glfwSetErrorCallback(error_callback);
+    glfwInit();
 
-    if (!glfwInit())
-        exit(EXIT_FAILURE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 
-    window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
-    if (!window)
+    while (!glfwWindowShouldClose(window)) 
     {
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-
-    glfwSetKeyCallback(window, key_callback);
-
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
-
-    while (!glfwWindowShouldClose(window))
-    {
-        float ratio;
-        int width, height;
-
-        glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float)height;
-
-        glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
+    
     glfwDestroyWindow(window);
 
     glfwTerminate();
-    exit(EXIT_SUCCESS);
 }

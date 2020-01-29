@@ -17,6 +17,8 @@ target_compile_options(${PROJECT_NAME}_logic INTERFACE
           /W4>)
 
 find_package(glfw REQUIRED)
+find_package(Vulkan REQUIRED)
+
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
@@ -27,7 +29,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     logic::${PROJECT_NAME}
-    glfw::glfw)
+    glfw::glfw
+    Vulkan::Vulkan)
 target_compile_options(${PROJECT_NAME} PRIVATE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
           -Wall>
