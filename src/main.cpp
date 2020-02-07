@@ -1,8 +1,12 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vulkan_renderer.hpp>
 
 int main(void)
 {
+    auto renderer = graphics::VulkanRenderer();
+    renderer.init();
+
     const int WIDTH = 800;
     const int HEIGHT = 600;
 
@@ -19,6 +23,5 @@ int main(void)
     }
     
     glfwDestroyWindow(window);
-
     glfwTerminate();
 }
