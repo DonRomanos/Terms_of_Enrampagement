@@ -4,9 +4,6 @@
 
 int main(void)
 {
-    auto renderer = graphics::VulkanRenderer();
-    renderer.init();
-
     const int WIDTH = 800;
     const int HEIGHT = 600;
 
@@ -16,6 +13,9 @@ int main(void)
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+
+    auto renderer = graphics::VulkanRenderer(window);
+    renderer.init();
 
     while (!glfwWindowShouldClose(window)) 
     {

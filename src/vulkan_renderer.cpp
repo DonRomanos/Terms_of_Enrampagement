@@ -19,6 +19,11 @@ namespace
         "VK_LAYER_KHRONOS_validation"
     };
 
+    const std::vector<const char*> required_device_extensions =
+    {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
     // a named lambda for easier readability
     auto is_in(const std::vector<VkLayerProperties>& available_layers)
     {
@@ -41,6 +46,10 @@ namespace
     }
 }
 
+graphics::VulkanRenderer::VulkanRenderer(GLFWwindow* window) : window(window)
+{
+}
+
 void graphics::VulkanRenderer::init()
 {
     create_instance();
@@ -54,6 +63,7 @@ void graphics::VulkanRenderer::render()
 
 graphics::VulkanRenderer::~VulkanRenderer()
 {
+    vkDestroySurfaceKHR(instance, rendering_surface, nullptr);
     vkDestroyInstance(instance, nullptr);
     vkDestroyDevice(device, nullptr);
 }
@@ -92,7 +102,8 @@ void graphics::VulkanRenderer::create_instance()
         createInfo.ppEnabledLayerNames = required_validation_layers.data();
     }
 
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) 
+    {
         throw std::runtime_error("Failed to create vulkan instance!");
     }
 }
@@ -123,14 +134,38 @@ namespace
 
     QueueFamily select_queue_family(const std::vector<QueueFamily>& families)
     {
-        // TODO select appropriately
+        // TODO select appropriately and also handle different ones.
         return families.front();
+    }
+
+    auto is_in(const std::vector<VkExtensionProperties>& properties)
+    {
+        return [&properties](const char* name) { return std::find_if(properties.begin(), properties.end(),
+            [name](const VkExtensionProperties properties) {return strcmp(name, properties.extensionName) == 0; }) != properties.end(); };
+    }
+
+    bool are_all_required_extensions_supported(VkPhysicalDevice device)
+    {
+        uint32_t extension_count;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
+
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
+
+        return std::all_of(required_device_extensions.begin(), required_device_extensions.end(), is_in(available_extensions));
     }
 
     VkPhysicalDevice select_physical_device(const std::vector<VkPhysicalDevice>& devices)
     {
+        VkPhysicalDevice current_device = devices.front();
+
+        if (!are_all_required_extensions_supported(current_device))
+        {
+            throw std::runtime_error("Device does not support all required extensions.");
+        }
+
         // TODO select appropriately
-        return devices.front();
+        return current_device;
     }
 }
 
@@ -170,7 +205,8 @@ void graphics::VulkanRenderer::create_logical_device()
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue_create_info,
         .enabledLayerCount = 0,
-        .enabledExtensionCount = 0,
+        .enabledExtensionCount = static_cast<uint32_t>(required_device_extensions.size()),
+        .ppEnabledExtensionNames = required_device_extensions.data(),
         .pEnabledFeatures = &device_features
     };
 
@@ -186,4 +222,12 @@ void graphics::VulkanRenderer::create_logical_device()
     }
 
     vkGetDeviceQueue(device, selected_queue_family.index, 0, &graphics_queue);
+}
+
+void graphics::VulkanRenderer::create_surface()
+{
+    if (glfwCreateWindowSurface(instance, window, nullptr, &rendering_surface) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create window surface!");
+    }
 }
