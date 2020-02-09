@@ -8,6 +8,10 @@
 
 namespace
 {
+    // TODO replace / inject properly. Duplicated in main.
+    const uint32_t WIDTH = 800;
+    const uint32_t HEIGHT = 600;
+
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
@@ -55,6 +59,8 @@ void graphics::VulkanRenderer::init()
     create_instance();
     pick_physical_device();
     create_logical_device();
+    create_surface();
+    create_swapchain();
 }
 
 void graphics::VulkanRenderer::render()
@@ -63,9 +69,10 @@ void graphics::VulkanRenderer::render()
 
 graphics::VulkanRenderer::~VulkanRenderer()
 {
+    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(instance, rendering_surface, nullptr);
     vkDestroyInstance(instance, nullptr);
-    vkDestroyDevice(device, nullptr);
 }
 
 void graphics::VulkanRenderer::create_instance()
@@ -155,6 +162,33 @@ namespace
         return std::all_of(required_device_extensions.begin(), required_device_extensions.end(), is_in(available_extensions));
     }
 
+    struct SwapChainCapabilities
+    {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentation_modes;
+    };
+
+    SwapChainCapabilities query_swap_chain_capabilities(VkPhysicalDevice device, VkSurfaceKHR surface)
+    {
+        SwapChainCapabilities result;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &result.capabilities);
+
+        uint32_t format_count;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr);
+
+        result.formats.resize(format_count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, result.formats.data());
+
+        uint32_t presentation_mode_count;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentation_mode_count, nullptr);
+
+        result.presentation_modes.resize(presentation_mode_count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentation_mode_count, result.presentation_modes.data());
+
+        return result;
+    }
+
     VkPhysicalDevice select_physical_device(const std::vector<VkPhysicalDevice>& devices)
     {
         VkPhysicalDevice current_device = devices.front();
@@ -166,6 +200,41 @@ namespace
 
         // TODO select appropriately
         return current_device;
+    }
+
+    VkSurfaceFormatKHR select_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)
+    {
+        auto preferred_format = std::find_if(available_formats.begin(), available_formats.end(), 
+            [](VkSurfaceFormatKHR available) { return available.format == VK_FORMAT_B8G8R8A8_SRGB && available.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; });
+    
+        if (preferred_format == available_formats.end())
+        {
+            return available_formats.front();
+        }
+        return *preferred_format;
+    }
+
+    VkPresentModeKHR select_presentation_mode(const std::vector<VkPresentModeKHR>& available_presentation_modes)
+    {
+        auto preferred_mode = std::find_if(available_presentation_modes.begin(), available_presentation_modes.end(),
+            [](VkPresentModeKHR mode) { return mode == VK_PRESENT_MODE_MAILBOX_KHR; });
+
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
+    VkExtent2D select_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities)
+    {
+        VkExtent2D result{ capabilities.currentExtent };
+
+        // Vulkan treats this value special, if its set to the maximum then the window manager allows us different resolutions
+        // and we can pick one ourselves within minExtent and maxExtent
+        if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max())
+        {
+            result.width = std::clamp(WIDTH, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+            result.height = std::clamp(HEIGHT, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        }
+
+        return result;
     }
 }
 
@@ -230,4 +299,53 @@ void graphics::VulkanRenderer::create_surface()
     {
         throw std::runtime_error("failed to create window surface!");
     }
+
+    VkBool32 is_surface_supported = VK_FALSE;
+    // TODO replace with proper queue index
+    if (vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, 0, rendering_surface, &is_surface_supported) != VK_SUCCESS ||
+        is_surface_supported == VK_FALSE)
+    {
+        throw std::runtime_error("Surface not supported by device and queue");
+    }
+}
+
+void graphics::VulkanRenderer::create_swapchain()
+{
+    SwapChainCapabilities selected_swapchain = query_swap_chain_capabilities(physical_device, rendering_surface);
+
+    VkSurfaceFormatKHR selected_surface_format = select_surface_format(selected_swapchain.formats);
+    VkPresentModeKHR selected_presentation_mode = select_presentation_mode(selected_swapchain.presentation_modes);
+    VkExtent2D selected_extent = select_swap_extent(selected_swapchain.capabilities);
+
+    uint32_t imageCount = std::max(selected_swapchain.capabilities.minImageCount + 1, selected_swapchain.capabilities.maxImageCount);
+
+    VkSwapchainCreateInfoKHR swapchain_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = rendering_surface,
+        .minImageCount = imageCount,
+        .imageFormat = selected_surface_format.format,
+        .imageColorSpace = selected_surface_format.colorSpace,
+        .imageExtent = selected_extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, // TODO need to change if we have different queue families and want to share ownership between them
+        .preTransform = selected_swapchain.capabilities.currentTransform,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = selected_presentation_mode,
+        .clipped = VK_TRUE,
+        .oldSwapchain = VK_NULL_HANDLE
+    };
+
+    if (vkCreateSwapchainKHR(device, &swapchain_create_info, nullptr, &swapchain) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create swap chain!");
+    }
+
+    // refresh image count as vulkan can create more images than our recommendation
+    vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+    swapchain_images.resize(imageCount);
+    vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchain_images.data());
+
+    swapchain_format = selected_surface_format.format;
+    swapchain_extent = selected_extent;
 }
