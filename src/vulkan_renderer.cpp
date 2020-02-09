@@ -69,6 +69,8 @@ void graphics::VulkanRenderer::render()
 
 graphics::VulkanRenderer::~VulkanRenderer()
 {
+
+    std::for_each(swapchain_imageviews.begin(), swapchain_imageviews.end(), [device = device](VkImageView view) {vkDestroyImageView(device, view, nullptr); });
     vkDestroySwapchainKHR(device, swapchain, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(instance, rendering_surface, nullptr);
@@ -164,9 +166,9 @@ namespace
 
     struct SwapChainCapabilities
     {
-        VkSurfaceCapabilitiesKHR capabilities;
-        std::vector<VkSurfaceFormatKHR> formats;
-        std::vector<VkPresentModeKHR> presentation_modes;
+        VkSurfaceCapabilitiesKHR capabilities = VkSurfaceCapabilitiesKHR{};
+        std::vector<VkSurfaceFormatKHR> formats = {};
+        std::vector<VkPresentModeKHR> presentation_modes = {};
     };
 
     SwapChainCapabilities query_swap_chain_capabilities(VkPhysicalDevice device, VkSurfaceKHR surface)
@@ -217,7 +219,7 @@ namespace
     VkPresentModeKHR select_presentation_mode(const std::vector<VkPresentModeKHR>& available_presentation_modes)
     {
         auto preferred_mode = std::find_if(available_presentation_modes.begin(), available_presentation_modes.end(),
-            [](VkPresentModeKHR mode) { return mode == VK_PRESENT_MODE_MAILBOX_KHR; });
+            [](VkPresentModeKHR mode) { return mode == VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR; });
 
         return VK_PRESENT_MODE_FIFO_KHR;
     }
@@ -348,4 +350,39 @@ void graphics::VulkanRenderer::create_swapchain()
 
     swapchain_format = selected_surface_format.format;
     swapchain_extent = selected_extent;
+}
+
+void graphics::VulkanRenderer::create_imageviews()
+{
+    swapchain_imageviews.resize(swapchain_images.size());
+
+    size_t index = 0;
+    for ( auto image : swapchain_images)
+    {
+        VkImageViewCreateInfo imageview_create_info = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D
+        };
+
+        imageview_create_info.components = {
+            .r = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
+            .g = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
+            .b = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
+            .a = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY
+        };
+
+        imageview_create_info.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        if (vkCreateImageView(device, &imageview_create_info, nullptr, &swapchain_imageviews[index++]) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("Failed to create image views!");
+        }
+    }
 }

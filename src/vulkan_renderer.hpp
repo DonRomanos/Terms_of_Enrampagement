@@ -24,6 +24,7 @@ namespace graphics
 		void create_logical_device();
 		void create_surface();
 		void create_swapchain();
+		void create_imageviews();
 
 		VkInstance instance = VK_NULL_HANDLE;
 		VkPhysicalDevice physical_device = VK_NULL_HANDLE;
@@ -31,9 +32,10 @@ namespace graphics
 		VkQueue graphics_queue = VK_NULL_HANDLE;
 		VkSurfaceKHR rendering_surface = VK_NULL_HANDLE;
 		VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-		std::vector<VkImage> swapchain_images;
-		VkFormat swapchain_format;
-		VkExtent2D swapchain_extent;
+		std::vector<VkImage> swapchain_images = {};
+		std::vector<VkImageView> swapchain_imageviews = {};
+		VkFormat swapchain_format = VkFormat::VK_FORMAT_UNDEFINED;
+		VkExtent2D swapchain_extent = VkExtent2D{};
 		GLFWwindow* window = nullptr;
 	};
 }
