@@ -25,6 +25,7 @@ namespace graphics
 		void create_surface();
 		void create_swapchain();
 		void create_imageviews();
+		void create_graphics_pipeline();
 
 		VkInstance instance = VK_NULL_HANDLE;
 		VkPhysicalDevice physical_device = VK_NULL_HANDLE;

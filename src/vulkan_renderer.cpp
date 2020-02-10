@@ -386,3 +386,8 @@ void graphics::VulkanRenderer::create_imageviews()
         }
     }
 }
+
+void graphics::VulkanRenderer::create_graphics_pipeline()
+{
+
+}

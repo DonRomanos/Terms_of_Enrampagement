@@ -19,6 +19,8 @@ target_compile_options(${PROJECT_NAME}_logic INTERFACE
 find_package(glfw REQUIRED)
 find_package(Vulkan REQUIRED)
 
+add_subdirectory(src/shaders)
+
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
