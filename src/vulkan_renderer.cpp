@@ -65,14 +65,62 @@ void graphics::VulkanRenderer::init()
     create_imageviews();
     create_render_pass();
     create_graphics_pipeline();
+    create_framebuffers();
+    create_command_pool();
+    create_command_buffers();
+    create_semaphores();
 }
 
-void graphics::VulkanRenderer::render()
+void graphics::VulkanRenderer::draw_frame()
 {
+    uint32_t image_index;
+    vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available, VK_NULL_HANDLE, &image_index);
+
+    VkSemaphore wait_for_image_available[] = { image_available };
+    VkPipelineStageFlags wait_at_color_attachment_output[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    VkSemaphore signal_rendering_finished[] = { rendering_finished };
+
+    VkSubmitInfo submit_info = { 
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = wait_for_image_available,
+        .pWaitDstStageMask = wait_at_color_attachment_output,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &command_buffers[image_index],
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = signal_rendering_finished
+    };
+
+    if (vkQueueSubmit(graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("Failed to submit draw command buffer!");
+    }
+
+    VkPresentInfoKHR present_info = { 
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = signal_rendering_finished,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &image_index,
+        .pResults = nullptr // only required if you have multiple swapchains (to check result of each one)
+    };
+
+    vkQueuePresentKHR(graphics_queue, &present_info);
+
+    // TODO: fix this is not performant should use fences to indicate when the cpu can submit new commands
+    vkQueueWaitIdle(graphics_queue);
 }
 
 graphics::VulkanRenderer::~VulkanRenderer()
 {
+    vkDeviceWaitIdle(device);
+
+    vkDestroySemaphore(device, rendering_finished, nullptr);
+    vkDestroySemaphore(device, image_available, nullptr);
+    vkDestroyCommandPool(device, command_pool, nullptr);
+    std::for_each(framebuffers.begin(), framebuffers.end(), [device = device](auto buffer){ vkDestroyFramebuffer(device, buffer, nullptr); });
     vkDestroyPipeline(device, pipeline, nullptr);
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
     vkDestroyRenderPass(device, render_pass, nullptr);
@@ -424,7 +472,7 @@ namespace
         VkShaderModule shader_module;
         if (vkCreateShaderModule(device, &shader_module_create_info, nullptr, &shader_module) != VK_SUCCESS)
         {
-            throw std::runtime_error("failed to create shader module!");
+            throw std::runtime_error("Failed to create shader module!");
         }
         return shader_module;
     }
@@ -594,17 +642,134 @@ void graphics::VulkanRenderer::create_render_pass()
         .pColorAttachments = &color_attachment_reference
     };
 
+    // our subpass should wait for an image to become available
+    VkSubpassDependency dependency = {
+    .srcSubpass = VK_SUBPASS_EXTERNAL, // Means the built in subpass before the actual render pass
+    .dstSubpass = 0,
+    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    .srcAccessMask = 0,
+    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+    };
+
     VkRenderPassCreateInfo render_pass_create_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = 1,
         .pAttachments = &color_attachment,
         .subpassCount = 1,
-        .pSubpasses = &subpass
+        .pSubpasses = &subpass,
+        .dependencyCount = 1,
+        .pDependencies = &dependency
     };
 
     if (vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass) != VK_SUCCESS) 
     {
         throw std::runtime_error("Failed to create render pass!");
     }
+}
+
+void graphics::VulkanRenderer::create_framebuffers()
+{
+    framebuffers.resize(swapchain_imageviews.size());
+
+    for (size_t index = 0; index < framebuffers.size(); ++index)
+    {
+        VkImageView attachments[] = { swapchain_imageviews[index] };
+
+        VkFramebufferCreateInfo framebuffer_create_info = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = render_pass,
+            .attachmentCount = 1,
+            .pAttachments = attachments,
+            .width = swapchain_extent.width,
+            .height = swapchain_extent.height,
+            .layers = 1
+        };
+
+        if (vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &framebuffers[index]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create framebuffer!");
+        }
+    }
+}
+
+void graphics::VulkanRenderer::create_command_pool()
+{
+    // TODO: replace with proper queue_family logic unify call sites
+    auto selected_queue_family = select_queue_family(available_queue_families(physical_device));
+
+    VkCommandPoolCreateInfo pool_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .queueFamilyIndex = selected_queue_family.index
+    };
+
+    if (vkCreateCommandPool(device, &pool_info, nullptr, &command_pool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create command pool!");
+    }
+}
+
+void graphics::VulkanRenderer::create_command_buffers()
+{
+    command_buffers.resize(framebuffers.size());
+
+    VkCommandBufferAllocateInfo allocation_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = static_cast<uint32_t>(command_buffers.size())
+    };
+
+    if (vkAllocateCommandBuffers(device, &allocation_info, command_buffers.data()) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("Failed to allocate command buffers!");
+    }
+
+    for (size_t index = 0; index < command_buffers.size(); ++index) 
+    {
+        VkCommandBufferBeginInfo begin_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pInheritanceInfo = nullptr
+        };
+
+        if (vkBeginCommandBuffer(command_buffers[index], &begin_info) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("Failed to begin recording command buffer!");
+        }
+
+        VkClearValue clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+        VkRenderPassBeginInfo pass_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = render_pass,
+            .framebuffer = framebuffers[index],
+            .renderArea = {.offset{0,0}, .extent{swapchain_extent} },
+            .clearValueCount = 1,
+            .pClearValues = &clear_color
+        };
+
+        vkCmdBeginRenderPass(command_buffers[index], &pass_info, VK_SUBPASS_CONTENTS_INLINE);
+        // recording has begun
+        vkCmdBindPipeline(command_buffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        vkCmdDraw(command_buffers[index], 3, 1, 0, 0);
+        vkCmdEndRenderPass(command_buffers[index]);
+        // recording has ended
+        if (vkEndCommandBuffer(command_buffers[index]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+
+    }
+}
+
+void graphics::VulkanRenderer::create_semaphores()
+{
+    VkSemaphoreCreateInfo create_info = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+    if (vkCreateSemaphore(device, &create_info, nullptr, &image_available) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &create_info, nullptr, &rendering_finished) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("failed to create semaphores!");
+    }
+
 }
 

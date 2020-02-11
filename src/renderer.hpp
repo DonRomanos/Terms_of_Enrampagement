@@ -6,7 +6,7 @@ namespace graphics
 	{
 	public:
 		virtual void init() = 0;
-		virtual void render() = 0;
+		virtual void draw_frame() = 0;
 
 		virtual ~Renderer() {};
 	};

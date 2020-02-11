@@ -15,6 +15,6 @@ void Application::execute_main_loop()
 {
 	while (dispatcher->handleEvents() != input::GameStatus::Terminated)
 	{
-		renderer->render();
+		renderer->draw_frame();
 	}
 }

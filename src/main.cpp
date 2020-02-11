@@ -14,12 +14,16 @@ int main(void)
 
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 
-    graphics::VulkanRenderer renderer(window);
-    renderer.init();
-
-    while (!glfwWindowShouldClose(window)) 
+    // Important since renderer refers window
     {
-        glfwPollEvents();
+        graphics::VulkanRenderer renderer(window);
+        renderer.init();
+
+        while (!glfwWindowShouldClose(window))
+        {
+            glfwPollEvents();
+            renderer.draw_frame();
+        }
     }
     
     glfwDestroyWindow(window);
