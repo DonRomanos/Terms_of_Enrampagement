@@ -5,6 +5,7 @@
 #include <string_view>
 #include <algorithm>
 #include <optional>
+#include <fstream>
 
 namespace
 {
@@ -61,6 +62,9 @@ void graphics::VulkanRenderer::init()
     create_logical_device();
     create_surface();
     create_swapchain();
+    create_imageviews();
+    create_render_pass();
+    create_graphics_pipeline();
 }
 
 void graphics::VulkanRenderer::render()
@@ -69,7 +73,9 @@ void graphics::VulkanRenderer::render()
 
 graphics::VulkanRenderer::~VulkanRenderer()
 {
-
+    vkDestroyPipeline(device, pipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
+    vkDestroyRenderPass(device, render_pass, nullptr);
     std::for_each(swapchain_imageviews.begin(), swapchain_imageviews.end(), [device = device](VkImageView view) {vkDestroyImageView(device, view, nullptr); });
     vkDestroySwapchainKHR(device, swapchain, nullptr);
     vkDestroyDevice(device, nullptr);
@@ -362,7 +368,8 @@ void graphics::VulkanRenderer::create_imageviews()
         VkImageViewCreateInfo imageview_create_info = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = swapchain_format
         };
 
         imageview_create_info.components = {
@@ -387,7 +394,217 @@ void graphics::VulkanRenderer::create_imageviews()
     }
 }
 
+namespace
+{
+    std::vector<char> file_to_buffer(const std::string& filename)
+    {
+        std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("failed to open file!");
+        }
+
+        size_t size = static_cast<size_t>(file.tellg());
+        std::vector<char> buffer(size);
+
+        file.seekg(0);
+        file.read(buffer.data(), size);
+
+        return buffer;
+    }
+
+    VkShaderModule create_shader_module(const std::vector<char>& shader_bytecode, VkDevice device)
+    {
+        VkShaderModuleCreateInfo shader_module_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shader_bytecode.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(shader_bytecode.data()) // Make sure alignment is correct, which is true for vector std::allocator
+        };
+
+        VkShaderModule shader_module;
+        if (vkCreateShaderModule(device, &shader_module_create_info, nullptr, &shader_module) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create shader module!");
+        }
+        return shader_module;
+    }
+}
+
 void graphics::VulkanRenderer::create_graphics_pipeline()
 {
+    VkShaderModule vertex_shader_module = create_shader_module(file_to_buffer("vert.spv"), device);
+    VkShaderModule fragment_shader_module = create_shader_module(file_to_buffer("frag.spv"), device);
 
+    VkPipelineShaderStageCreateInfo vertex_shader_stage = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertex_shader_module,
+        .pName = "main"
+    };
+
+    VkPipelineShaderStageCreateInfo fragment_shader_stage = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = fragment_shader_module,
+        .pName = "main"
+    };
+
+    VkPipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage, fragment_shader_stage };
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 0,
+        .pVertexBindingDescriptions = nullptr,
+        .vertexAttributeDescriptionCount = 0,
+        .pVertexAttributeDescriptions = nullptr
+    };
+
+    // Assembly: how vertexes should be interpreted, e.g. how many belong together for lines / triangles 
+    VkPipelineInputAssemblyStateCreateInfo input_assembly = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = VK_FALSE
+    };
+
+    // Viewport: what area you see (culling)
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(swapchain_extent.width),
+        .height = static_cast<float>(swapchain_extent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    VkRect2D scissor = {
+        .offset = { 0, 0 },
+        .extent = swapchain_extent
+    };
+
+    VkPipelineViewportStateCreateInfo viewport_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = &viewport,
+        .scissorCount = 1,
+        .pScissors = &scissor
+    };
+
+    // Rasterizer: how to render our polygons, e.g. fill, wireframe, how o cull, etc. 
+    VkPipelineRasterizationStateCreateInfo rasterizer = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .lineWidth = 1.0f,
+    };
+
+    // Multisampling: a type of aliasing
+    VkPipelineMultisampleStateCreateInfo multisampling = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE
+    };
+
+    // Color blending: mixing new color with color that is already in the framebuffer.
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {
+        .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+        .colorBlendOp = VK_BLEND_OP_ADD, // Optional
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+        .alphaBlendOp = VK_BLEND_OP_ADD, // Optional
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+    };
+    
+    // Here we can add some constant colors for blending
+    VkPipelineColorBlendStateCreateInfo color_blending = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY, // Optional
+        .attachmentCount = 1,
+        .pAttachments = &color_blend_attachment
+    };
+
+    // Pipeline Layout: ...
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0, // Optional
+        .pSetLayouts = nullptr, // Optional
+        .pushConstantRangeCount = 0, // Optional
+        .pPushConstantRanges = nullptr, // Optional
+    };
+
+    if (vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create pipeline layout!");
+    }
+
+    // Finally the Pipeline
+    VkGraphicsPipelineCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = 2,
+        .pStages = shader_stages,
+        .pVertexInputState = &vertex_input_info,
+        .pInputAssemblyState = &input_assembly,
+        .pViewportState = &viewport_state,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pDepthStencilState = nullptr, // Optional
+        .pColorBlendState = &color_blending,
+        .pDynamicState = nullptr, // Optional
+        .layout = pipeline_layout,
+        .renderPass = render_pass,
+        .subpass = 0,
+        .basePipelineHandle = VK_NULL_HANDLE, // Optional
+        .basePipelineIndex = -1 // Optional
+    };
+
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("Failed to create graphics pipeline!");
+    }
+
+    vkDestroyShaderModule(device, fragment_shader_module, nullptr);
+    vkDestroyShaderModule(device, vertex_shader_module, nullptr);
 }
+
+void graphics::VulkanRenderer::create_render_pass()
+{
+    VkAttachmentDescription color_attachment = {
+        .format = swapchain_format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    };
+
+    VkAttachmentReference color_attachment_reference = {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkSubpassDescription subpass = {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_reference
+    };
+
+    VkRenderPassCreateInfo render_pass_create_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &color_attachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass
+    };
+
+    if (vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("Failed to create render pass!");
+    }
+}
+
