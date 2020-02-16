@@ -2,7 +2,7 @@ from conans import ConanFile, CMake
 
 class StringChallenge(ConanFile):
     settings = 'os', 'arch', 'compiler', 'build_type'
-    requires = "gtest/1.8.1@bincrafters/stable", "benchmark/1.5.0", "glfw/3.3@bincrafters/stable"
+    requires = "gtest/1.8.1@bincrafters/stable", "benchmark/1.5.0", "glfw/3.3@bincrafters/stable", "range-v3/0.10.0@ericniebler/stable"
     generators = "cmake_find_package" # can be updated to cmake_find_package_multi if necessary
 
     def imports(self):
