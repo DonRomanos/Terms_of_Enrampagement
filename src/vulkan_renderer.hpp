@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer.hpp"
+#include "vulkan_setup_helper.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -19,10 +20,7 @@ namespace graphics
 
 		~VulkanRenderer() override;
 	private:
-		void create_instance();
-		void pick_physical_device();
-		void create_logical_device();
-		void create_surface();
+		//void create_surface();
 		void create_swapchain();
 		void create_imageviews();
 		void create_graphics_pipeline();
@@ -32,8 +30,8 @@ namespace graphics
 		void create_command_buffers();
 		void create_semaphores();
 
-		VkInstance instance = VK_NULL_HANDLE;
-		VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+		VulkanSetupHelper setup_helper;
+
 		VkDevice device = VK_NULL_HANDLE;
 		VkQueue graphics_queue = VK_NULL_HANDLE;
 		VkSurfaceKHR rendering_surface = VK_NULL_HANDLE;

@@ -27,7 +27,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/application.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/glfw_dispatcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan_renderer.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan_renderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan_setup_helper.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -39,7 +40,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
           -Wall>
      $<$<CXX_COMPILER_ID:MSVC>:
-          /W4>)
+          /W4 /std:c++latest /permissive- /experimental:preprocessor>)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 ######################################################################
 option(BUILD_TESTS "Will build the tests verifying your result" ON)
 if( BUILD_TESTS)

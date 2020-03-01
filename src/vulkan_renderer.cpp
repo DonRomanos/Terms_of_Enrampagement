@@ -9,58 +9,45 @@
 
 namespace
 {
-    // TODO replace / inject properly. Duplicated in main.
-    const uint32_t WIDTH = 800;
-    const uint32_t HEIGHT = 600;
 
 #ifdef NDEBUG
-    const bool enableValidationLayers = false;
+    const std::vector<const char*> required_validation_layers{};
 #else
-    const bool enable_validation_layers = true;
+    const std::vector<const char*> required_validation_layers{ "VK_LAYER_KHRONOS_validation" };
 #endif
 
-    const std::vector<const char*> required_validation_layers = 
-    {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    const std::vector<const char*> required_device_extensions =
+    const std::vector<const char*> deviceExtensions = 
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
-    // a named lambda for easier readability
-    auto is_in(const std::vector<VkLayerProperties>& available_layers)
+    // TODO replace / inject properly. Duplicated in main.
+    const uint32_t WIDTH = 800;
+    const uint32_t HEIGHT = 600;
+
+    std::vector<const char*> get_required_extensions()
     {
-        return [&available_layers](const char* required_layer_name)
-        {
-            return available_layers.end() != std::find_if(available_layers.begin(), available_layers.end(),
-                [&required_layer_name](const VkLayerProperties& properties) { return std::strcmp(required_layer_name, properties.layerName) == 0; });
-        };
-    }
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    bool are_required_validation_layers_available() 
-    {
-        uint32_t layer_count;
-        vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
-        std::vector<VkLayerProperties> available_layers{ layer_count };
-        vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+        auto extensions = std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
+#ifdef NDEBUG
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
-        return std::all_of(required_validation_layers.begin(), required_validation_layers.end(), is_in(available_layers));
+        return extensions;
     }
 }
 
-graphics::VulkanRenderer::VulkanRenderer(GLFWwindow* window) : window(window)
+graphics::VulkanRenderer::VulkanRenderer(GLFWwindow* window) : window(window), setup_helper(window)
 {
+    device = setup_helper.acquire_device(get_required_extensions(), required_validation_layers);
 }
 
 void graphics::VulkanRenderer::init()
 {
-    create_instance();
-    pick_physical_device();
-    create_logical_device();
-    create_surface();
     create_swapchain();
     create_imageviews();
     create_render_pass();
@@ -92,7 +79,7 @@ void graphics::VulkanRenderer::draw_frame()
         .pSignalSemaphores = signal_rendering_finished
     };
 
-    if (vkQueueSubmit(graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) 
+    if (vkQueueSubmit(setup_helper.get_graphics_queue(), 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) 
     {
         throw std::runtime_error("Failed to submit draw command buffer!");
     }
@@ -107,10 +94,10 @@ void graphics::VulkanRenderer::draw_frame()
         .pResults = nullptr // only required if you have multiple swapchains (to check result of each one)
     };
 
-    vkQueuePresentKHR(graphics_queue, &present_info);
+    vkQueuePresentKHR(setup_helper.get_graphics_queue(), &present_info);
 
     // TODO: fix this is not performant should use fences to indicate when the cpu can submit new commands
-    vkQueueWaitIdle(graphics_queue);
+    vkQueueWaitIdle(setup_helper.get_graphics_queue());
 }
 
 graphics::VulkanRenderer::~VulkanRenderer()
@@ -126,49 +113,6 @@ graphics::VulkanRenderer::~VulkanRenderer()
     vkDestroyRenderPass(device, render_pass, nullptr);
     std::for_each(swapchain_imageviews.begin(), swapchain_imageviews.end(), [device = device](VkImageView view) {vkDestroyImageView(device, view, nullptr); });
     vkDestroySwapchainKHR(device, swapchain, nullptr);
-    vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(instance, rendering_surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
-}
-
-void graphics::VulkanRenderer::create_instance()
-{
-    if (enable_validation_layers && !are_required_validation_layers_available())
-    {
-        throw std::runtime_error("Validation layers requested but not available");
-    }
-
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Terms of Enrampagement";
-    appInfo.applicationVersion = VK_MAKE_VERSION(0, 9, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(0, 9, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
-
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    createInfo.enabledExtensionCount = glfwExtensionCount;
-    createInfo.ppEnabledExtensionNames = glfwExtensions;
-
-    createInfo.enabledLayerCount = 0;
-
-    if (enable_validation_layers)
-    {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(required_validation_layers.size());
-        createInfo.ppEnabledLayerNames = required_validation_layers.data();
-    }
-
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("Failed to create vulkan instance!");
-    }
 }
 
 namespace
@@ -207,17 +151,6 @@ namespace
             [name](const VkExtensionProperties properties) {return strcmp(name, properties.extensionName) == 0; }) != properties.end(); };
     }
 
-    bool are_all_required_extensions_supported(VkPhysicalDevice device)
-    {
-        uint32_t extension_count;
-        vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-        vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
-
-        return std::all_of(required_device_extensions.begin(), required_device_extensions.end(), is_in(available_extensions));
-    }
-
     struct SwapChainCapabilities
     {
         VkSurfaceCapabilitiesKHR capabilities = VkSurfaceCapabilitiesKHR{};
@@ -243,19 +176,6 @@ namespace
         vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentation_mode_count, result.presentation_modes.data());
 
         return result;
-    }
-
-    VkPhysicalDevice select_physical_device(const std::vector<VkPhysicalDevice>& devices)
-    {
-        VkPhysicalDevice current_device = devices.front();
-
-        if (!are_all_required_extensions_supported(current_device))
-        {
-            throw std::runtime_error("Device does not support all required extensions.");
-        }
-
-        // TODO select appropriately
-        return current_device;
     }
 
     VkSurfaceFormatKHR select_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)
@@ -294,80 +214,25 @@ namespace
     }
 }
 
-void graphics::VulkanRenderer::pick_physical_device()
-{
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-
-    if (deviceCount == 0)
-    {
-        throw std::runtime_error("Failed to find GPUs with Vulkan support!");
-    }
-
-    std::vector<VkPhysicalDevice> devices{ deviceCount };
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-
-    physical_device = select_physical_device(devices);
-}
-
-void graphics::VulkanRenderer::create_logical_device()
-{
-    auto selected_queue_family = select_queue_family(available_queue_families(physical_device));
-
-    VkDeviceQueueCreateInfo queue_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = selected_queue_family.index,
-        .queueCount = 1
-    };
-
-    float queue_priority = 1.0f;
-    queue_create_info.pQueuePriorities = &queue_priority;
-
-    VkPhysicalDeviceFeatures device_features = {};
-
-    VkDeviceCreateInfo device_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue_create_info,
-        .enabledLayerCount = 0,
-        .enabledExtensionCount = static_cast<uint32_t>(required_device_extensions.size()),
-        .ppEnabledExtensionNames = required_device_extensions.data(),
-        .pEnabledFeatures = &device_features
-    };
-
-    if (enable_validation_layers)
-    {
-        device_create_info.enabledLayerCount = static_cast<uint32_t>(required_validation_layers.size());
-        device_create_info.ppEnabledLayerNames = required_validation_layers.data();
-    }
-
-    if (vkCreateDevice(physical_device, &device_create_info, nullptr, &device) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("Failed to create logical device!");
-    }
-
-    vkGetDeviceQueue(device, selected_queue_family.index, 0, &graphics_queue);
-}
-
-void graphics::VulkanRenderer::create_surface()
-{
-    if (glfwCreateWindowSurface(instance, window, nullptr, &rendering_surface) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create window surface!");
-    }
-
-    VkBool32 is_surface_supported = VK_FALSE;
-    // TODO replace with proper queue index
-    if (vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, 0, rendering_surface, &is_surface_supported) != VK_SUCCESS ||
-        is_surface_supported == VK_FALSE)
-    {
-        throw std::runtime_error("Surface not supported by device and queue");
-    }
-}
+//void graphics::VulkanRenderer::create_surface()
+//{
+//    if (glfwCreateWindowSurface(setup_helper.get_instance(), window, nullptr, &rendering_surface) != VK_SUCCESS)
+//    {
+//        throw std::runtime_error("failed to create window surface!");
+//    }
+//
+//    VkBool32 is_surface_supported = VK_FALSE;
+//    // TODO replace with proper queue index
+//    if (vkGetPhysicalDeviceSurfaceSupportKHR(setup_helper.get_physical_device(), 0, rendering_surface, &is_surface_supported) != VK_SUCCESS ||
+//        is_surface_supported == VK_FALSE)
+//    {
+//        throw std::runtime_error("Surface not supported by device and queue");
+//    }
+//}
 
 void graphics::VulkanRenderer::create_swapchain()
 {
-    SwapChainCapabilities selected_swapchain = query_swap_chain_capabilities(physical_device, rendering_surface);
+    SwapChainCapabilities selected_swapchain = query_swap_chain_capabilities(setup_helper.get_physical_device(), setup_helper.get_surface());
 
     VkSurfaceFormatKHR selected_surface_format = select_surface_format(selected_swapchain.formats);
     VkPresentModeKHR selected_presentation_mode = select_presentation_mode(selected_swapchain.presentation_modes);
@@ -377,7 +242,7 @@ void graphics::VulkanRenderer::create_swapchain()
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = rendering_surface,
+        .surface = setup_helper.get_surface(),
         .minImageCount = imageCount,
         .imageFormat = selected_surface_format.format,
         .imageColorSpace = selected_surface_format.colorSpace,
@@ -696,7 +561,7 @@ void graphics::VulkanRenderer::create_framebuffers()
 void graphics::VulkanRenderer::create_command_pool()
 {
     // TODO: replace with proper queue_family logic unify call sites
-    auto selected_queue_family = select_queue_family(available_queue_families(physical_device));
+    auto selected_queue_family = select_queue_family(available_queue_families(setup_helper.get_physical_device()));
 
     VkCommandPoolCreateInfo pool_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

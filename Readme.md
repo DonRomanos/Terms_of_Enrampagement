@@ -28,7 +28,103 @@ Each player action will be a command, which will be sent to the server, which in
 
 Thats the basic Idea, lets see what we can do.
 
-## Following Tools and Libraries are required
+Problems that are likely to be encountered
+
+* Out of sync detection / handling
+* A uniform clock across all connected instances (clients and server)
+* Floating Point precision errors accumulating and making the game non deterministic
+
+## Rendering
+
+I experimented a bit with Vulkan for this project and tried to gain an understanding of its concepts. This is not meant to be a tutorial but rather an explanation of how I understand that Vulkan works.
+
+<details><summary>Click here if you are interested in my experience with graphics programming</summary>
+<p>
+
+### Vulkan Experience
+
+So you have decided to use Vulkan eh? Think twice, I can see only three kinds of people who should bother with it:
+
+* Masochists
+* People who **really** have a need for performance (and get paid for it)
+* People who enjoy learning and have masochistic traits
+
+Unfortunately I seem to be of the last kind, therefore this section. Be aware it took me roughly 1000 lines to output a triangle on the screen. 
+
+In Vulkan you have control over practiacally everything, which is good. However it also means you have to explicitly set everything up, Vulkan does not implicitly use any defaults. I mostly followed this excellent [tutorial](https://vulkan-tutorial.com/) until I had something on the screen. Then I went and restructured the code, all while trying to understand better how Vulkan works and whats the rationale behind its design.
+
+#### Basic Concepts
+
+As Vulkan is a C-API it does not by default work with any C++ features like containers. Vulkan follows a pattern when returning a list, such functions take a counter and a data variable by reference.
+
+* First call the function with a nullptr and an empty counter -> it will set the counter to the appropriate value
+* Then call the same Function again with the counter and a pointer to allocated memory -> the memory will be filled with appropriate structs
+
+Example:
+
+```cpp
+// Get the count of physical devices
+uint32_t deviceCount = 0;
+vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+// Allocate required memory using vector constructor (requires C++11) and fill the data
+std::vector<VkPhysicalDevice> devices{ deviceCount };
+vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+```
+
+Most Objects you create in Vulkan require quite a bit of parameters, these parameters are passed in structs of the form *Vk...CreateInfo*
+
+```cpp
+VkDeviceQueueCreateInfo queue_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // used for versioning inside of vulkan
+        .queueFamilyIndex = selected_queue_family.index,
+        .queueCount = 1
+    };
+```
+
+Any resource you acquire in Vulkan has to be released through an appropriate call to vk..Destroy if not otherwise specified
+
+```cpp
+vkDestroyInstance(instance, nullptr); // 2nd parameter is an allocation function which can be used for memory logging etc.
+```
+
+#### Vulkan Device
+
+The most central part of your Vulkan application is a `VkDevice` this is something comparable to an OpenGl context, it is used to keep track of resources for example.
+This is not the actual physical GPU but an abstraction above. However it does require you to specify which GPU you want to use. Here you should also check if all your required features, extensions, validation layers are supported by your physical device.
+
+The setup will look something along these lines
+
+```cpp
+if (vkCreateDevice(physical_device, &device_create_info, nullptr, &device) != VK_SUCCESS) 
+{
+    throw std::runtime_error("Failed to create logical device!");
+}
+```
+
+The `device_create_info` contains all required information as usual. Important is that you make sure the GPU you selected actually supports all of your required operations.
+
+Vulkan also knows a `VkInstance` which is always the first thing you have to setup. You can imagine this as a way to keep track for the driver who is currently using the GPU and what settings it has to prepare (since multiple Applications can use the GPU at the same time). 
+
+##### Validation Layers
+
+Validation Layers are Vulkans way to check for errors and debug. Since Vulkan is a high performance and low level API error checking is kept to an absolute minimum. To help debugging it is recommended to activate at least some basic layers in debug with **VK_LAYER_LUNARG_standard_validation**. Layers are activated by the loader, either through passing them into the instance or via some [registry /environment variables](https://vulkan.lunarg.com/doc/view/1.0.13.0/windows/layers.html).
+
+##### Extensions
+
+Extensions are specific operations that the driver can, but does not have to support. The most common one you will use is the windowing system *VK_USE_PLATFORM_XXX_KHR* where XXX is the platform name, e.g. *WINDOWS, LINUX, ANDROID...*. Luckily **Glfw** helps us here and abstracts all the platform specific code away from us and delivers us with a list of extensions that are required for rendering. The abstraction of the windowing system is based on `VkSurfaceKHR` which is part of an extension, as can be seen in the ending KHR.
+
+#### References
+
+* [vulkan-tutorial.com](https://vulkan-tutorial.com/)
+* [vulkan.lunarg.com](https://vulkan.lunarg.com/doc/view/1.0.57.0/windows/tutorial/html)
+* [https://vulkan.lunarg.com/](https://vulkan.lunarg.com/) - Reference and SDK
+* [vulkan in 30 minutes](https://renderdoc.org/vulkan-in-30-minutes.html)
+
+</p>
+</details>
+
+## Required Libraries and Tools
 
 * CMake
 * Conan
