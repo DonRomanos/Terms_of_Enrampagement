@@ -305,7 +305,7 @@ VkDevice graphics::VulkanSetupHelper::acquire_device(const std::vector<const cha
         throw std::runtime_error("Failed to create logical device!");
     }
 
-    // As Queues are part of the device set them up
+    // As Queues are part of the device set them up here.
     std::tie(graphics_queue, present_queue) = get_graphics_and_present_queue_handles(device, graphics_family, present_family);
  
     return device;

@@ -88,6 +88,14 @@ Any resource you acquire in Vulkan has to be released through an appropriate cal
 vkDestroyInstance(instance, nullptr); // 2nd parameter is an allocation function which can be used for memory logging etc.
 ```
 
+#### Validation Layers
+
+Validation Layers are Vulkans way to check for errors and debug. Since Vulkan is a high performance and low level API error checking is kept to an absolute minimum. To help debugging it is recommended to activate at least some basic layers in debug with **VK_LAYER_LUNARG_standard_validation**. Layers are activated by the loader, either through passing them into the instance or via some [registry /environment variables](https://vulkan.lunarg.com/doc/view/1.0.13.0/windows/layers.html).
+
+#### Extensions
+
+Extensions are specific operations that the driver can, but does not have to support. The most common one you will use is the windowing system *VK_USE_PLATFORM_XXX_KHR* where XXX is the platform name, e.g. *WINDOWS, LINUX, ANDROID...*. Luckily **Glfw** helps us here and abstracts all the platform specific code away from us and delivers us with a list of extensions that are required for rendering. The abstraction of the windowing system is based on `VkSurfaceKHR` which is part of an extension, as can be seen in the ending KHR.
+
 #### Vulkan Device
 
 The most central part of your Vulkan application is a `VkDevice` this is something comparable to an OpenGl context, it is used to keep track of resources for example.
@@ -104,15 +112,16 @@ if (vkCreateDevice(physical_device, &device_create_info, nullptr, &device) != VK
 
 The `device_create_info` contains all required information as usual. Important is that you make sure the GPU you selected actually supports all of your required operations.
 
-Vulkan also knows a `VkInstance` which is always the first thing you have to setup. You can imagine this as a way to keep track for the driver who is currently using the GPU and what settings it has to prepare (since multiple Applications can use the GPU at the same time). 
+To setup the device, you roughly need the following steps:
 
-##### Validation Layers
+* Create a Vulkan Instance (here you can give names and versions to your engine, e.g. for driver optimizations and specify the Vulkan version)
+* Select a physical device (make sure the device supports what you want, e.g. extensions for presenting and graphics)
+* Select which queue families you need (e.g. for graphics and present support [for this you need to know the surface you render to])
+* Now you can finally create the device
 
-Validation Layers are Vulkans way to check for errors and debug. Since Vulkan is a high performance and low level API error checking is kept to an absolute minimum. To help debugging it is recommended to activate at least some basic layers in debug with **VK_LAYER_LUNARG_standard_validation**. Layers are activated by the loader, either through passing them into the instance or via some [registry /environment variables](https://vulkan.lunarg.com/doc/view/1.0.13.0/windows/layers.html).
+As a last step you should also acquire handles to the queues you are using in order to interact with them later.
 
-##### Extensions
-
-Extensions are specific operations that the driver can, but does not have to support. The most common one you will use is the windowing system *VK_USE_PLATFORM_XXX_KHR* where XXX is the platform name, e.g. *WINDOWS, LINUX, ANDROID...*. Luckily **Glfw** helps us here and abstracts all the platform specific code away from us and delivers us with a list of extensions that are required for rendering. The abstraction of the windowing system is based on `VkSurfaceKHR` which is part of an extension, as can be seen in the ending KHR.
+**Note** Vulkan divides the queues into families with properties. A queue family can execute one or more operations listed in their `properties` member. The family will also tell you how many queues of each family you can create. The queues are created together with the `VkDevice` and its handles acquired through `vkGetDeviceQueue`. Queues will be released along with the `VkDevice`. I could not find any information when it is benefitial to create more than one queue of any family. However you should always use the most specialized queue for your operations.
 
 #### References
 
