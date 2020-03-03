@@ -214,22 +214,6 @@ namespace
     }
 }
 
-//void graphics::VulkanRenderer::create_surface()
-//{
-//    if (glfwCreateWindowSurface(setup_helper.get_instance(), window, nullptr, &rendering_surface) != VK_SUCCESS)
-//    {
-//        throw std::runtime_error("failed to create window surface!");
-//    }
-//
-//    VkBool32 is_surface_supported = VK_FALSE;
-//    // TODO replace with proper queue index
-//    if (vkGetPhysicalDeviceSurfaceSupportKHR(setup_helper.get_physical_device(), 0, rendering_surface, &is_surface_supported) != VK_SUCCESS ||
-//        is_surface_supported == VK_FALSE)
-//    {
-//        throw std::runtime_error("Surface not supported by device and queue");
-//    }
-//}
-
 void graphics::VulkanRenderer::create_swapchain()
 {
     SwapChainCapabilities selected_swapchain = query_swap_chain_capabilities(setup_helper.get_physical_device(), setup_helper.get_surface());

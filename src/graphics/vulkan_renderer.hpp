@@ -1,6 +1,6 @@
 #pragma once
 
-#include "renderer.hpp"
+#include "graphics_engine.hpp"
 #include "vulkan_setup_helper.hpp"
 
 #define GLFW_INCLUDE_VULKAN

@@ -20,13 +20,15 @@ namespace graphics
 	class VulkanSetupHelper
 	{
 	public:
-		VulkanSetupHelper(GLFWwindow* window);
+		explicit VulkanSetupHelper(GLFWwindow* window);
 		~VulkanSetupHelper() noexcept;
 
 		VulkanSetupHelper(const VulkanSetupHelper& other) = delete;
 		VulkanSetupHelper& operator=(const VulkanSetupHelper& other) = delete;
 
-		//TODO add move support
+		VulkanSetupHelper(VulkanSetupHelper&& other) = default;
+		VulkanSetupHelper& operator=(VulkanSetupHelper&& other) = default;
+
 		[[nodiscard]] VkDevice acquire_device(
 			const std::vector<const char*>& required_extensions, 
 			const std::vector<const char*>& required_validation_layers,
@@ -41,6 +43,8 @@ namespace graphics
 		[[nodiscard]] VkQueue get_present_queue() const noexcept { return present_queue; }
 	private:
 		GLFWwindow* window;
+
+		// TODO add RAI wrapper for destruction support.
 		VkInstance instance;
 		VkPhysicalDevice physical_device;
 		VkSurfaceKHR surface;
