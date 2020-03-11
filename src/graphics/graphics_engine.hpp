@@ -1,13 +1,16 @@
 #pragma once
 
+struct GLFWwindow;
+
 namespace graphics
 {
-	class Renderer
+	class Engine
 	{
 	public:
-		virtual void init() = 0;
 		virtual void draw_frame() = 0;
 
-		virtual ~Renderer() {};
+		[[nodiscard]] virtual GLFWwindow* get_window() noexcept = 0;
+
+		virtual ~Engine() {};
 	};
 }

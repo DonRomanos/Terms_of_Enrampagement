@@ -123,6 +123,16 @@ As a last step you should also acquire handles to the queues you are using in or
 
 **Note** Vulkan divides the queues into families with properties. A queue family can execute one or more operations listed in their `properties` member. The family will also tell you how many queues of each family you can create. The queues are created together with the `VkDevice` and its handles acquired through `vkGetDeviceQueue`. Queues will be released along with the `VkDevice`. I could not find any information when it is benefitial to create more than one queue of any family. However you should always use the most specialized queue for your operations.
 
+#### Swapchain
+
+After having a Device and Queues we can now proceed to create the SwapChain. A Swapchain has 3 important properties:
+
+* SurfaceFormat, this specifies the color space of the images, e.g. VK_FORMAT_B8G8R8A8_SRGB
+* PresentMode, specifies how images will be presented to screen e.g. fifo, immediatly...
+* Extent, this is just the size of the images
+
+In order to set those values you have to query whats available for your device and then pick the suitable setting for you.
+
 #### References
 
 * [vulkan-tutorial.com](https://vulkan-tutorial.com/)

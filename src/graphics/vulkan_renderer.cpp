@@ -1,5 +1,12 @@
 #include "vulkan_renderer.hpp"
 
+#include "range/v3/algorithm.hpp"
+#include "range/v3/view/filter.hpp"
+#include "range/v3/range/operations.hpp"
+
+#define GLFW_INCLUDE_VULKAN
+#include "GLFW/glfw3.h"
+
 #include <stdexcept>
 #include <vector>
 #include <string_view>
@@ -21,7 +28,6 @@ namespace
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
-    // TODO replace / inject properly. Duplicated in main.
     const uint32_t WIDTH = 800;
     const uint32_t HEIGHT = 600;
 
@@ -41,9 +47,15 @@ namespace
     }
 }
 
-graphics::VulkanRenderer::VulkanRenderer(GLFWwindow* window) : window(window), setup_helper(window)
+graphics::VulkanRenderer::VulkanRenderer() : glfw_helper(WIDTH, HEIGHT), setup_helper(glfw_helper.get_window())
 {
-    device = setup_helper.acquire_device(get_required_extensions(), required_validation_layers);
+    device = setup_helper.acquire_device(get_required_extensions(), required_validation_layers, deviceExtensions);
+    init();
+}
+
+GLFWwindow* graphics::VulkanRenderer::get_window() noexcept
+{
+    return glfw_helper.get_window();
 }
 
 void graphics::VulkanRenderer::init()
@@ -204,7 +216,7 @@ namespace
 
         // Vulkan treats this value special, if its set to the maximum then the window manager allows us different resolutions
         // and we can pick one ourselves within minExtent and maxExtent
-        if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max())
+        if (capabilities.currentExtent.width == (std::numeric_limits<uint32_t>::max)())
         {
             result.width = std::clamp(WIDTH, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
             result.height = std::clamp(HEIGHT, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
@@ -222,7 +234,7 @@ void graphics::VulkanRenderer::create_swapchain()
     VkPresentModeKHR selected_presentation_mode = select_presentation_mode(selected_swapchain.presentation_modes);
     VkExtent2D selected_extent = select_swap_extent(selected_swapchain.capabilities);
 
-    uint32_t imageCount = std::max(selected_swapchain.capabilities.minImageCount + 1, selected_swapchain.capabilities.maxImageCount);
+    uint32_t imageCount = (std::max)(selected_swapchain.capabilities.minImageCount + 1, selected_swapchain.capabilities.maxImageCount);
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,

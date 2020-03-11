@@ -1,26 +1,38 @@
 #pragma once
 
 #include "graphics_engine.hpp"
+
+// TODO reorder includes and fix them. GLFW / Vulkan include system headers with macro max against which ranges is not guarded ...
+
+#include "range/v3/algorithm.hpp"
+#include "range/v3/view/filter.hpp"
+#include "range/v3/range/operations.hpp"
+
+#include "glfw_helper.hpp"
 #include "vulkan_setup_helper.hpp"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 
 #include <vector>
 
+struct GLFWwindow;
+
+
 namespace graphics
 {
-	class VulkanRenderer : public Renderer
+	class VulkanRenderer : public Engine
 	{
 	public:
-		VulkanRenderer(GLFWwindow* window);
+		VulkanRenderer();
 
-		virtual void init() override;
+		[[nodiscard]] GLFWwindow* get_window() noexcept override;
+
 		virtual void draw_frame() override;
 
 		~VulkanRenderer() override;
 	private:
-		//void create_surface();
+		void init(); // TODO: remove and put in constructor
+
 		void create_swapchain();
 		void create_imageviews();
 		void create_graphics_pipeline();
@@ -30,6 +42,7 @@ namespace graphics
 		void create_command_buffers();
 		void create_semaphores();
 
+		GlfwHelper glfw_helper;
 		VulkanSetupHelper setup_helper;
 
 		VkDevice device = VK_NULL_HANDLE;
@@ -48,6 +61,5 @@ namespace graphics
 		VkCommandPool command_pool = VK_NULL_HANDLE;
 		VkSemaphore image_available;
 		VkSemaphore rendering_finished;
-		GLFWwindow* window = nullptr;
 	};
 }

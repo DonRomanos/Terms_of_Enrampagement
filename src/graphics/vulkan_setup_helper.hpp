@@ -1,14 +1,14 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include "GLFW/glfw3.h"
 
 #include <vector>
 
+struct GLFWwindow;
+
 namespace graphics
 {
-	const std::vector<const char*> default_device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
 	struct QueueFamily
 	{
 		uint32_t index;
@@ -32,10 +32,10 @@ namespace graphics
 		[[nodiscard]] VkDevice acquire_device(
 			const std::vector<const char*>& required_extensions, 
 			const std::vector<const char*>& required_validation_layers,
-			const std::vector<const char*>& device_extensions = default_device_extensions
+			const std::vector<const char*>& device_extensions
 		);
 
-		// Todo check what of and when this can be removed. --> after refactoring
+		// Todo check what of and when this can be removed. --> after refactoring of engine
 		[[nodiscard]] VkInstance get_instance() const noexcept { return instance; }
 		[[nodiscard]] VkPhysicalDevice get_physical_device() const noexcept { return physical_device; }
 		[[nodiscard]] VkSurfaceKHR get_surface() const noexcept { return surface; }
