@@ -11,7 +11,7 @@ option(BUILD_TESTS "Will build the tests verifying your result" ON)
 # This project is structurized into different main parts, which are as follows:
 
 # Program: basically the main setting up the dependencies, this is the executable defined in this CMakelists.txt
-# Utility: everything that is shared or does not belong to any other part and is used by many other parts, e.g. clock, network, etc.
+# Core:    everything that is shared or does not belong to any other part and is used by many other parts, e.g. clock, network, etc.
 # Input:   responsible for any kind of user information
 # Graphics: this is the implementation of the graphics engine
 # Simulation: this contains the game state and logic and advances the logic based on the inputs
@@ -25,7 +25,7 @@ find_package(range-v3 REQUIRED)
 
 #*******************************************************************************
 # Submodules
-add_subdirectory(src/utility)
+add_subdirectory(src/core)
 add_subdirectory(src/input)
 add_subdirectory(src/simulation)
 add_subdirectory(src/graphics)
@@ -41,7 +41,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     graphics::vulkan_engine
-    input::glfw_translator
+    input::glfw_action_factory
     #simulation::logic
     #input::provider
     #...
@@ -51,7 +51,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
           -Wall -Wextra -pedantic -Werror>
      $<$<CXX_COMPILER_ID:MSVC>:
-          /W4 /WX /std:c++latest /permissive- /experimental:preprocessor> # most of it required for range-v3
+          /W4 /WX /std:c++latest>
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
