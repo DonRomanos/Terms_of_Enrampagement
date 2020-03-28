@@ -1,6 +1,13 @@
 #include "action_factory.hpp"
+#include "glfw_input_provider.hpp"
 
 using namespace input;
+
+input::DefaultActionFactory::DefaultActionFactory(GLFWwindow* window)
+	: input_source(std::unique_ptr<InputProvider>(new GlfwInputProvider(window)))
+	, action_table(default_action_table)
+{
+}
 
 input::DefaultActionFactory::DefaultActionFactory(std::unique_ptr<InputProvider>&& input_source, InputActionTable action_table)
 	: input_source(std::move(input_source))

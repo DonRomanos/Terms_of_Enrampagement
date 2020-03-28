@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 
+struct GLFWwindow;
+
 namespace input
 {
 	class ActionFactory
@@ -19,6 +21,7 @@ namespace input
 	class DefaultActionFactory : public ActionFactory
 	{
 	public:
+		explicit DefaultActionFactory(GLFWwindow* window);
 		DefaultActionFactory(std::unique_ptr<InputProvider>&& input_source, InputActionTable action_table);
 
 		[[nodiscard]] virtual std::vector<core::Actions> produce_actions();

@@ -45,7 +45,7 @@ if( BUILD_TESTS)
 
     add_executable(glfw_action_factory_tests)
     target_sources(glfw_action_factory_tests PRIVATE 
-        ${CMAKE_CURRENT_LIST_DIR}/tests/input_tests.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/tests/action_factory_tests.cpp
     )
 
     target_include_directories(glfw_action_factory_tests PRIVATE

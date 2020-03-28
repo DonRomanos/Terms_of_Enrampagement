@@ -7,6 +7,7 @@ using namespace input;
 input::GlfwInputProvider::GlfwInputProvider(GLFWwindow* window) : window(window)
 {
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetWindowCloseCallback(window, window_close_callback);
 }
 
 const std::vector<Event>& input::GlfwInputProvider::poll_events()
