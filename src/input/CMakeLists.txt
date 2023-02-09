@@ -26,7 +26,7 @@ target_link_libraries(glfw_action_factory PUBLIC
     input::action_factory
     core::core
 PRIVATE
-    glfw::glfw
+    glfw
 )
 
 target_compile_options(glfw_action_factory PRIVATE
@@ -41,7 +41,7 @@ set_property(TARGET glfw_action_factory PROPERTY CXX_STANDARD 20)
 
 #***************************************************************
 if( BUILD_TESTS)
-    find_package(gtest REQUIRED)
+    find_package(GTest REQUIRED)
 
     add_executable(glfw_action_factory_tests)
     target_sources(glfw_action_factory_tests PRIVATE 
@@ -53,7 +53,7 @@ if( BUILD_TESTS)
 
     target_link_libraries(glfw_action_factory_tests PRIVATE
         input::glfw_action_factory
-        gtest::gtest
+        GTest::gtest
     )
 
     target_compile_features(glfw_action_factory_tests PRIVATE cxx_std_20)

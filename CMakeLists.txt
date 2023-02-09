@@ -19,8 +19,7 @@ option(BUILD_TESTS "Will build the tests verifying your result" ON)
 # Every module has its files in a subdirectory.
 # Glfw is used as a dependency for window management and maths
 
-find_package(glfw REQUIRED)
-find_package(Vulkan REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(range-v3 REQUIRED)
 
 #*******************************************************************************
@@ -28,7 +27,7 @@ find_package(range-v3 REQUIRED)
 add_subdirectory(src/core)
 add_subdirectory(src/input)
 add_subdirectory(src/simulation)
-add_subdirectory(src/graphics)
+#add_subdirectory(src/graphics)
 add_subdirectory(src/benchmark)
 add_subdirectory(src/program)
 
@@ -40,7 +39,6 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    graphics::vulkan_engine
     input::glfw_action_factory
     #simulation::logic
     #input::provider
@@ -60,7 +58,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 ######################################################################
 # Should be extracted each subdir should have its own tests!
 if( BUILD_TESTS)
-    find_package(gtest REQUIRED)
+    find_package(GTest REQUIRED)
 
     # Actual tests will be defined within subdirectories!
     add_executable(${PROJECT_NAME}_Tests)
@@ -71,7 +69,7 @@ if( BUILD_TESTS)
         src/)
 
     target_link_libraries(${PROJECT_NAME}_Tests PRIVATE
-        gtest::gtest
+        GTest::gtest
     )
 
     include(GoogleTest)

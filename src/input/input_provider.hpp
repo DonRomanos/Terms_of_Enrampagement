@@ -22,6 +22,6 @@ namespace input
 	{
 	public:
 		virtual const std::vector<Event>& poll_events() = 0;
-		virtual ~InputProvider() = 0 {};
+		virtual ~InputProvider() = default;
 	};
 }

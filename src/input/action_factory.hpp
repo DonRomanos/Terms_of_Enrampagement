@@ -15,7 +15,7 @@ namespace input
 	{
 	public:
 		[[nodiscard]] virtual std::vector<core::Actions> produce_actions() = 0;
-		virtual ~ActionFactory() = 0 {};
+		virtual ~ActionFactory() = default;
 	};
 
 	class DefaultActionFactory : public ActionFactory

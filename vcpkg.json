@@ -1,0 +1,10 @@
+{
+    "name": "terms-of-enrampagement",
+    "version": "0.0",
+    "dependencies":[
+        "benchmark",
+        "glfw3",
+        "range-v3",
+        "gtest"
+    ]
+}
