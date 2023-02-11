@@ -1,12 +1,18 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.25)
 
 project(Terms_of_Enrampagement)
-
+include(CTest)
 #*******************************************************************
 # User options
 
 option(BUILD_BENCHMARK "This will enable the performance tests using google benchmark" ON)
 option(BUILD_TESTS "Will build the tests verifying your result" ON)
+
+if(BUILD_TESTING)
+    find_package(GTest REQUIRED)
+
+    include(GoogleTest)
+endif()
 
 # This project is structurized into different main parts, which are as follows:
 
@@ -39,7 +45,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    input::glfw_action_factory
+    input::glfw
     #simulation::logic
     #input::provider
     #...
