@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.25)
 
 project(Terms_of_Enrampagement)
 include(CTest)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 #*******************************************************************
 # User options
 
@@ -30,12 +34,12 @@ find_package(range-v3 REQUIRED)
 
 #*******************************************************************************
 # Submodules
+add_subdirectory(src/application)
 add_subdirectory(src/core)
 add_subdirectory(src/input)
 add_subdirectory(src/simulation)
 #add_subdirectory(src/graphics)
 add_subdirectory(src/benchmark)
-add_subdirectory(src/program)
 
 #***********************************************************************************
 add_executable(${PROJECT_NAME})
@@ -44,8 +48,10 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    input::glfw
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        input::glfw
+        application::application
     #simulation::logic
     #input::provider
     #...

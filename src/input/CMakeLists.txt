@@ -16,14 +16,17 @@ add_library(input_glfw)
 add_library(input::glfw ALIAS input_glfw)
 
 target_sources(input_glfw PRIVATE
-    glfw_input_provider.hpp
-    glfw_input_provider.cpp
+    glfw/include/input/glfw_input_provider.hpp
+    glfw/glfw_input_provider.cpp
+)
+
+target_include_directories(input_glfw PUBLIC
+    glfw/include
 )
 
 target_link_libraries(input_glfw PUBLIC
     input::interface
     core::core
-PRIVATE
     glfw
 )
 

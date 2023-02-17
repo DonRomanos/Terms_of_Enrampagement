@@ -9,7 +9,8 @@ namespace input
 	class GlfwInputProvider : public input::Provider
 	{
 	public:
-		GlfwInputProvider(GLFWwindow* window); 
+		GlfwInputProvider(GLFWwindow* window);
+		~GlfwInputProvider(); 
 
 		void process_input();
 
