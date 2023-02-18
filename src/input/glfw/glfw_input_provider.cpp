@@ -23,6 +23,9 @@ GlfwInputProvider::~GlfwInputProvider()
 
 void GlfwInputProvider::key_callback(GLFWwindow*, int key, int, int action, int mods)
 {
+	(void) key;
+	(void) action;
+	(void) mods;
 	std::cout << "Key event" << std::endl;
 }
 

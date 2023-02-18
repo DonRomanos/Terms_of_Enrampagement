@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.25)
 project(Terms_of_Enrampagement)
 include(CTest)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 #*******************************************************************
 # User options
 
@@ -18,6 +15,8 @@ if(BUILD_TESTING)
     include(GoogleTest)
 endif()
 
+
+include(cmake/compiler-settings.cmake)
 # This project is structurized into different main parts, which are as follows:
 
 # Program: basically the main setting up the dependencies, this is the executable defined in this CMakelists.txt
