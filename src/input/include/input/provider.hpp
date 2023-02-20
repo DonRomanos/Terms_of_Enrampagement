@@ -4,7 +4,9 @@ namespace input
 {
 class Provider
 {
-    void process_input();
+public:
+    virtual ~Provider() = default;
+    virtual void process_input() = 0;
 };
 
 };

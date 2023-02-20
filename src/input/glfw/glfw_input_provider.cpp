@@ -21,6 +21,11 @@ GlfwInputProvider::~GlfwInputProvider()
 	glfwTerminate();
 }
 
+void GlfwInputProvider::process_input()
+{
+	glfwPollEvents();
+}
+
 void GlfwInputProvider::key_callback(GLFWwindow*, int key, int, int action, int mods)
 {
 	(void) key;

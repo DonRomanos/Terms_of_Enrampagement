@@ -10,7 +10,10 @@ Application::Application(std::unique_ptr<input::Provider> input_provider)
 
 int Application::run()
 {
-	while(true);
+	while(true)
+	{
+		m_input_provider->process_input();
+	}
 }
 
 }
