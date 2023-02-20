@@ -15,8 +15,6 @@ if(BUILD_TESTING)
     include(GoogleTest)
 endif()
 
-
-include(cmake/compiler-settings.cmake)
 # This project is structurized into different main parts, which are as follows:
 
 # Program: basically the main setting up the dependencies, this is the executable defined in this CMakelists.txt
@@ -31,6 +29,7 @@ include(cmake/compiler-settings.cmake)
 find_package(glfw3 REQUIRED)
 find_package(range-v3 REQUIRED)
 
+include(cmake/compiler-settings.cmake)
 #*******************************************************************************
 # Submodules
 add_subdirectory(src/application)

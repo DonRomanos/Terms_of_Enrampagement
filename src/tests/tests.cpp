@@ -5,7 +5,7 @@ class Some_typed_Test : public ::testing::Test
 {
 
 };
-TYPED_TEST_CASE_P(Some_typed_Test);
+TYPED_TEST_SUITE_P(Some_typed_Test);
 
 /***************************************************************/
 TYPED_TEST_P(Some_typed_Test, Should_Succeed) {
@@ -15,13 +15,13 @@ TYPED_TEST_P(Some_typed_Test, Should_Succeed) {
 }
 
 // Register all test names, e.g. Should_Succeed
-REGISTER_TYPED_TEST_CASE_P(Some_typed_Test,
+REGISTER_TYPED_TEST_SUITE_P(Some_typed_Test,
                             Should_Succeed);
 
 // Now we can instantiate it with our types.
 using TypesToTest = ::testing::Types<int>;
 
-INSTANTIATE_TYPED_TEST_CASE_P(WhateverNameYouWant, Some_typed_Test, TypesToTest);
+INSTANTIATE_TYPED_TEST_SUITE_P(WhateverNameYouWant, Some_typed_Test, TypesToTest);
 
 TEST(GtestDependency, Should_Compile_if_gtest_was_found)
 {
