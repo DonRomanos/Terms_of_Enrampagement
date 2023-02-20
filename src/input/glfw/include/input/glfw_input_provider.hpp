@@ -13,10 +13,12 @@ namespace input
 		~GlfwInputProvider(); 
 
 		void process_input() override;
+		[[nodiscard]] bool user_wants_to_quit() noexcept override;
 
 	private:
 		static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 		static void window_close_callback(GLFWwindow* window);
+		static bool m_user_wants_to_quit;
 
 		GLFWwindow* window;
 	};

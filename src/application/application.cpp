@@ -10,10 +10,11 @@ Application::Application(std::unique_ptr<input::Provider> input_provider)
 
 int Application::run()
 {
-	while(true)
+	while(!m_input_provider->user_wants_to_quit())
 	{
 		m_input_provider->process_input();
 	}
+	return 0;
 }
 
 }
