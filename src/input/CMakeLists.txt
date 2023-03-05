@@ -9,6 +9,7 @@ target_include_directories(input_interface
 target_sources(input_interface
     INTERFACE
         include/input/provider.hpp
+        include/input/event.hpp
 )
 
 #***************************************************************

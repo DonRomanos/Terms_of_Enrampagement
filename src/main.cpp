@@ -6,7 +6,7 @@
 
 #include "application/include/application/application.hpp"
 
-int main(void)
+int main()
 {
     auto window = [] {
         if (auto init_result = glfwInit(); !init_result) {
