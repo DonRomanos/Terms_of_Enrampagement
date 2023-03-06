@@ -35,11 +35,11 @@ GlfwInputProvider::~GlfwInputProvider()
     m_current_provider = nullptr;
 }
 
-const std::vector<input::Event>& GlfwInputProvider::poll_events() const
+const std::span<input::Event> GlfwInputProvider::poll_events() const
 {
     m_events.clear();
     glfwPollEvents();
-    return m_events;
+    return {m_events.begin(), m_events.end()};
 };
 
 bool GlfwInputProvider::user_wants_to_quit() noexcept

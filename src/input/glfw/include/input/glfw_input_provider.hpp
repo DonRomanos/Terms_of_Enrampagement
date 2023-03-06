@@ -19,7 +19,7 @@ class GlfwInputProvider : public input::Provider
     GlfwInputProvider operator=(GlfwInputProvider&& other) = delete;
     ~GlfwInputProvider() override;
 
-    [[nodiscard]] const std::vector<input::Event>& poll_events() const override;
+    [[nodiscard]] const std::span<input::Event> poll_events() const override;
     [[nodiscard]] bool user_wants_to_quit() noexcept override;
 
    private:
