@@ -4,6 +4,7 @@
 
 namespace math
 {
+// NOLINTNEXTLINE
 TEST(Vector, Supports_arithmetic_operations)
 {
     // Addition
