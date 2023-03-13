@@ -37,6 +37,7 @@ add_subdirectory(src/core)
 add_subdirectory(src/input)
 add_subdirectory(src/math)
 add_subdirectory(src/simulation)
+add_subdirectory(src/utility)
 #add_subdirectory(src/graphics)
 add_subdirectory(src/benchmark)
 
